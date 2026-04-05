@@ -18,8 +18,8 @@ const client = new Client({
 const TOKEN = process.env.TOKEN;
 
 // 🔥 غيرها حسب سيرفرك
-const RESULTS_CHANNEL = "📊｜Captin・results";
-const HALL_CHANNEL_ID = "PUT_CHANNEL_ID_HERE";
+const RESULTS_CHANNEL = "🔒｜chat";
+const HALL_CHANNEL_ID = "1483219896069525665";
 
 // 📂 بيانات
 let wins = {};
