@@ -136,7 +136,7 @@ client.on("messageCreate", async (msg) => {
   }
 
   // 🔥 أمر التصفير
-  if (content === "!reset") {
+  if (content === "!res") {
 
     if (!msg.member.permissions.has("Administrator")) {
       return msg.reply("❌ هذا الأمر للإدارة فقط");
