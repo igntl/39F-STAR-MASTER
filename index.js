@@ -12,18 +12,15 @@ const client = new Client({
 const TOKEN = process.env.TOKEN;
 const CHANNEL_ID = "1483219896069525665";
 
-// 📊 البيانات
 let wins = {};
 let matchCount = 0;
 let leaderboardMessageId = null;
 const recentMatches = {};
 
-// تحميل
 if (fs.existsSync("wins.json")) {
   wins = JSON.parse(fs.readFileSync("wins.json"));
 }
 
-// 🏆 لوحة الشرف
 async function updateLeaderboard(channel) {
   const sorted = Object.entries(wins)
     .sort((a, b) => b[1] - a[1])
@@ -49,21 +46,18 @@ async function updateLeaderboard(channel) {
   }
 }
 
-// 🎯 النظام
 client.on("messageCreate", async (msg) => {
   if (msg.author.bot) return;
   if (msg.channel.id !== CHANNEL_ID) return;
 
   const content = msg.content;
 
-  // 📊 عرض اللوحة
   if (content.startsWith("!board") || content.startsWith("!top")) {
     leaderboardMessageId = null;
     await updateLeaderboard(msg.channel);
     return msg.reply("📊 تم عرض لوحة الشرف");
   }
 
-  // استخراج الفائز
   const winnerLine = content.match(/الفائز\s*:\s*<@!?(\d+)>/);
   if (!winnerLine) return;
 
@@ -71,22 +65,17 @@ client.on("messageCreate", async (msg) => {
   const winner = msg.guild.members.cache.get(winnerId)?.user;
   if (!winner) return;
 
-  // استخراج اللاعبين
   const players = Array.from(msg.mentions.users.values());
   if (players.length < 2) return;
 
-  // 🔒 مفتاح المباراة (بدون ترتيب)
-  const ids = [players[0].id, players[1].id].sort();
-  const key = `${ids[0]}-${ids[1]}`;
+  const key = `${players[0].id}-${players[1].id}`;
 
-  // ⏱️ منع التكرار دقيقة
   if (recentMatches[key] && Date.now() - recentMatches[key] < 60000) {
     return msg.reply("❌ لا تسجل نفس المباراة مرتين خلال دقيقة");
   }
 
   recentMatches[key] = Date.now();
 
-  // تسجيل الفوز
   if (!wins[winner.id]) wins[winner.id] = 0;
   wins[winner.id]++;
 
@@ -96,10 +85,9 @@ client.on("messageCreate", async (msg) => {
 
   msg.reply(`🏆 ${winner} فاز!\n🔥 مجموع فوزه: ${wins[winner.id]}`);
 
-  // تحديث اللوحة
   updateLeaderboard(msg.channel);
 
-  // 👑 كل 10 مباريات بالضبط
+  // ✅ هنا التعديل فقط
   if (matchCount === 10) {
 
     const sorted = Object.entries(wins)
@@ -118,7 +106,6 @@ client.on("messageCreate", async (msg) => {
 
     await msg.channel.send({ embeds: [embed] });
 
-    // 🔄 تصفير
     wins = {};
     matchCount = 0;
     leaderboardMessageId = null;
