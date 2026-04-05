@@ -70,7 +70,7 @@ client.on("messageCreate", async (msg) => {
 
   const key = `${players[0].id}-${players[1].id}`;
 
-  if (recentMatches[key] && Date.now() - recentMatches[key] < 60000) {
+  if (recentMatches[key] && Date.now() - recentMatches[key] < 10000) {
     return msg.reply("❌ لا تسجل نفس المباراة مرتين خلال دقيقة");
   }
 
