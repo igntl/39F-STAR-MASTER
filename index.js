@@ -88,7 +88,7 @@ client.on("messageCreate", async (msg) => {
   if (!wins[winner.id]) wins[winner.id] = 0;
   wins[winner.id]++;
 
-  matchCount++;
+ matchCount = matches.length;
 
   fs.writeFileSync("wins.json", JSON.stringify(wins, null, 2));
 
