@@ -1,4 +1,13 @@
-const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
+const {
+  Client,
+  GatewayIntentBits,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  Events
+} = require("discord.js");
+
 const fs = require("fs");
 
 const client = new Client({
@@ -13,6 +22,7 @@ const TOKEN = process.env.TOKEN;
 const CHANNEL_ID = "1483219896069525665";
 
 let wins = {};
+let totalWins = {};
 let leaderboardMessageId = null;
 const recentMatches = {};
 let divisionCount = 0;
@@ -21,8 +31,11 @@ let divisionCount = 0;
 if (fs.existsSync("wins.json")) {
   wins = JSON.parse(fs.readFileSync("wins.json"));
 }
+if (fs.existsSync("totalWins.json")) {
+  totalWins = JSON.parse(fs.readFileSync("totalWins.json"));
+}
 
-// 🏆 لوحة الشرف (كل اللاعبين)
+// 🏆 لوحة الشرف
 async function updateLeaderboard(channel) {
   const sorted = Object.entries(wins)
     .sort((a, b) => b[1] - a[1]);
@@ -53,72 +66,101 @@ client.on("messageCreate", async (msg) => {
 
   const content = msg.content;
 
-  // 📊 عرض اللوحة
+  // 📊 لوحة الشرف
   if (content === "!board" || content === "!top") {
     leaderboardMessageId = null;
     await updateLeaderboard(msg.channel);
     return msg.reply("📊 تم عرض لوحة الشرف");
   }
 
-  // 📈 عرض إحصائيات كاملة
+  // 📈 إحصائيات الأسبوع
   if (content === "!all") {
-
-    const sorted = Object.entries(wins)
-      .sort((a, b) => b[1] - a[1]);
-
-    if (sorted.length === 0) {
-      return msg.reply("❌ لا يوجد إحصائيات");
-    }
+    const sorted = Object.entries(wins).sort((a, b) => b[1] - a[1]);
+    if (!sorted.length) return msg.reply("❌ لا يوجد بيانات");
 
     const text = sorted.map((p, i) =>
       `${i+1}- <@${p[0]}> : ${p[1]} فوز`
     ).join("\n");
 
-    const embed = new EmbedBuilder()
-      .setColor("#5865f2")
-      .setTitle("📊 إحصائيات الأسبوع كاملة")
-      .setDescription(text.slice(0, 4000));
-
-    return msg.channel.send({ embeds: [embed] });
+    return msg.channel.send({
+      embeds: [new EmbedBuilder()
+        .setColor("#5865f2")
+        .setTitle("📊 إحصائيات الأسبوع")
+        .setDescription(text.slice(0, 4000))]
+    });
   }
 
-  // 🎯 تسجيل تقسيمة
+  // 🏆 إحصائيات دائمة
+  if (content === "!total") {
+    const sorted = Object.entries(totalWins).sort((a, b) => b[1] - a[1]);
+    if (!sorted.length) return msg.reply("❌ لا يوجد بيانات");
+
+    const text = sorted.map((p, i) =>
+      `${i+1}- <@${p[0]}> : ${p[1]} فوز`
+    ).join("\n");
+
+    return msg.channel.send({
+      embeds: [new EmbedBuilder()
+        .setColor("#00ff99")
+        .setTitle("🏆 الإحصائيات الكاملة")
+        .setDescription(text.slice(0, 4000))]
+    });
+  }
+
+  // 🎯 إنهاء تقسيمة
   if (content === "!done") {
-
     divisionCount++;
-
     msg.channel.send(`📊 تم تسجيل تقسيمة (${divisionCount}/10)`);
 
     if (divisionCount === 10) {
-
-      const sorted = Object.entries(wins)
-        .sort((a, b) => b[1] - a[1]);
-
-      if (sorted.length === 0) return;
+      const sorted = Object.entries(wins).sort((a, b) => b[1] - a[1]);
+      if (!sorted.length) return;
 
       const topId = sorted[0][0];
       const topWins = sorted[0][1];
 
-      const embed = new EmbedBuilder()
-        .setColor("#ffd700")
-        .setTitle("🏆 كابتن التقسيمة")
-        .setDescription(`👑 <@${topId}> هو الأكثر فوز!\n🔥 عدد الفوز: ${topWins}`)
-        .setFooter({ text: "تم تصفير الإحصائيات" });
+      await msg.channel.send({
+        embeds: [new EmbedBuilder()
+          .setColor("#ffd700")
+          .setTitle("🏆 كابتن التقسيمة")
+          .setDescription(`👑 <@${topId}> هو الأكثر فوز!\n🔥 عدد الفوز: ${topWins}`)]
+      });
 
-      await msg.channel.send({ embeds: [embed] });
-
-      // 🔄 تصفير
       wins = {};
       divisionCount = 0;
       leaderboardMessageId = null;
 
       fs.writeFileSync("wins.json", "{}");
     }
-
     return;
   }
 
-  // استخراج الفائز (مرن)
+  // 🔥 أمر التصفير
+  if (content === "!reset") {
+
+    if (!msg.member.permissions.has("Administrator")) {
+      return msg.reply("❌ هذا الأمر للإدارة فقط");
+    }
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("confirm_reset")
+        .setLabel("✅ تأكيد")
+        .setStyle(ButtonStyle.Danger),
+
+      new ButtonBuilder()
+        .setCustomId("cancel_reset")
+        .setLabel("❌ إلغاء")
+        .setStyle(ButtonStyle.Secondary)
+    );
+
+    return msg.reply({
+      content: "⚠️ هل أنت متأكد من تصفير جميع الإحصائيات؟",
+      components: [row]
+    });
+  }
+
+  // 🧠 استخراج الفائز
   let winnerId = null;
   const mentions = [...content.matchAll(/<@!?(\d+)>/g)];
 
@@ -137,22 +179,57 @@ client.on("messageCreate", async (msg) => {
   const ids = [players[0].id, players[1].id].sort();
   const key = `${ids[0]}-${ids[1]}`;
 
-  // ⏱️ منع التكرار دقيقة
   if (recentMatches[key] && Date.now() - recentMatches[key] < 60000) {
     return msg.reply("❌ لا تسجل نفس المباراة مرتين خلال دقيقة");
   }
 
   recentMatches[key] = Date.now();
 
-  // تسجيل الفوز
   if (!wins[winner.id]) wins[winner.id] = 0;
+  if (!totalWins[winner.id]) totalWins[winner.id] = 0;
+
   wins[winner.id]++;
+  totalWins[winner.id]++;
 
   fs.writeFileSync("wins.json", JSON.stringify(wins, null, 2));
+  fs.writeFileSync("totalWins.json", JSON.stringify(totalWins, null, 2));
 
   msg.reply(`🏆 ${winner} فاز!\n🔥 مجموع فوزه: ${wins[winner.id]}`);
 
   updateLeaderboard(msg.channel);
+});
+
+// 🔘 الأزرار
+client.on(Events.InteractionCreate, async (interaction) => {
+
+  if (!interaction.isButton()) return;
+
+  if (interaction.customId === "confirm_reset") {
+
+    if (!interaction.member.permissions.has("Administrator")) {
+      return interaction.reply({ content: "❌ هذا الزر للإدارة فقط", ephemeral: true });
+    }
+
+    wins = {};
+    totalWins = {};
+    divisionCount = 0;
+    leaderboardMessageId = null;
+
+    fs.writeFileSync("wins.json", "{}");
+    fs.writeFileSync("totalWins.json", "{}");
+
+    await interaction.update({
+      content: "♻️ تم تصفير جميع الإحصائيات",
+      components: []
+    });
+  }
+
+  if (interaction.customId === "cancel_reset") {
+    await interaction.update({
+      content: "❌ تم إلغاء التصفير",
+      components: []
+    });
+  }
 });
 
 client.once("ready", () => {
