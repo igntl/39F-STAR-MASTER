@@ -12,7 +12,7 @@ const client = new Client({
 const TOKEN = process.env.TOKEN;
 const CHANNEL_ID = "1483219896069525665";
 
-// 📊 بيانات
+// 📊 البيانات
 let wins = {};
 let matchCount = 0;
 let leaderboardMessageId = null;
@@ -49,14 +49,14 @@ async function updateLeaderboard(channel) {
   }
 }
 
-// 🎯 قراءة النتائج + أوامر
+// 🎯 النظام
 client.on("messageCreate", async (msg) => {
   if (msg.author.bot) return;
   if (msg.channel.id !== CHANNEL_ID) return;
 
   const content = msg.content;
 
-  // 📊 أمر عرض اللوحة
+  // 📊 عرض اللوحة
   if (content.startsWith("!board") || content.startsWith("!top")) {
     leaderboardMessageId = null;
     await updateLeaderboard(msg.channel);
@@ -75,9 +75,11 @@ client.on("messageCreate", async (msg) => {
   const players = Array.from(msg.mentions.users.values());
   if (players.length < 2) return;
 
-  // ⏱️ منع التكرار دقيقة
-  const key = `${players[0].id}-${players[1].id}`;
+  // 🔒 مفتاح المباراة (بدون ترتيب)
+  const ids = [players[0].id, players[1].id].sort();
+  const key = `${ids[0]}-${ids[1]}`;
 
+  // ⏱️ منع التكرار دقيقة
   if (recentMatches[key] && Date.now() - recentMatches[key] < 60000) {
     return msg.reply("❌ لا تسجل نفس المباراة مرتين خلال دقيقة");
   }
@@ -88,7 +90,7 @@ client.on("messageCreate", async (msg) => {
   if (!wins[winner.id]) wins[winner.id] = 0;
   wins[winner.id]++;
 
- matchCount = matches.length;
+  matchCount++;
 
   fs.writeFileSync("wins.json", JSON.stringify(wins, null, 2));
 
@@ -97,8 +99,8 @@ client.on("messageCreate", async (msg) => {
   // تحديث اللوحة
   updateLeaderboard(msg.channel);
 
-  // 👑 كل 10 مباريات
-  if (matchCount >= 10) {
+  // 👑 كل 10 مباريات بالضبط
+  if (matchCount === 10) {
 
     const sorted = Object.entries(wins)
       .sort((a, b) => b[1] - a[1]);
