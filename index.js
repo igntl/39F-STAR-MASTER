@@ -16,7 +16,7 @@ const client = new Client({
 
 const TOKEN = process.env.TOKEN;
 
-const CHANNEL_ID = "1483219896069525665";
+const CHANNEL_ID = "1359414548184043570";
 const ANNOUNCE_CHANNEL = "1489912837592842294";
 
 let wins = {};
